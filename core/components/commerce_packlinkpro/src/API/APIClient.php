@@ -4,26 +4,27 @@ namespace DigitalPenguin\Commerce_PacklinkPRO\API;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
-class PacklinkPROClient {
+class APIClient {
 
     /** @var Client */
     private $client;
 
-    public function __construct(string $apiKey, bool $testMode = true)
+    public function __construct(string $apiKey, bool $useSandbox = true)
     {
         $this->client = new Client([
             'headers' => [
+                'Authorization' => $apiKey,
                 'Content-Type'  => 'application/json',
             ],
-            'base_uri'      =>  $testMode ? 'https://apisandbox.packlink.com/v1' : 'https://api.packlink.com/v1',
+            'base_uri'      =>  $useSandbox ? 'https://apisandbox.packlink.com/v1' : 'https://api.packlink.com/v1',
             'http_errors'   =>  false,
-            'auth'          =>  [$apiKey, null]
         ]);
     }
 
     /**
      * Creates an API request and actions it
      * @param string $resource
+     * @param string $apiKey
      * @param array $data
      * @param string $method
      * @return Response
