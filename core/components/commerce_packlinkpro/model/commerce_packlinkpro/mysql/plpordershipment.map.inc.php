@@ -2,7 +2,7 @@
 /**
  * PacklinkPRO for Commerce.
  *
- * Copyright 2021 by Murray Wood @ Digital Penguin
+ * Copyright 2020 by Your Name <your@email.com>
  *
  * This file is meant to be used with Commerce by modmore. A valid Commerce license is required.
  *

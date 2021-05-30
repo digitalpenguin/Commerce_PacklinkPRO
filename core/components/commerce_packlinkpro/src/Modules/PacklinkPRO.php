@@ -1,11 +1,12 @@
 <?php
 namespace DigitalPenguin\Commerce_PacklinkPRO\Modules;
 
-use DigitalPenguin\Commerce_PacklinkPRO\API\APIClient;
 use modmore\Commerce\Admin\Widgets\Form\CheckboxField;
 use modmore\Commerce\Admin\Widgets\Form\PasswordField;
 use modmore\Commerce\Admin\Widgets\Form\SectionField;
+use modmore\Commerce\Events\Admin\GeneratorEvent;
 use modmore\Commerce\Modules\BaseModule;
+use plpOrderShipment;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
@@ -42,6 +43,17 @@ class PacklinkPRO extends BaseModule
         // Add template path to twig
         $root = dirname(__DIR__, 2);
         $this->commerce->view()->addTemplatesPath($root . '/templates/');
+
+        $this->adapter->loadClass(plpOrderShipment::class, $path . 'commerce_packlinkpro/');
+
+        // Events
+        $dispatcher->addListener(\Commerce::EVENT_DASHBOARD_INIT_GENERATOR, [$this, 'loadPages']);
+    }
+
+    public function loadPages(GeneratorEvent $event)
+    {
+        $generator = $event->getGenerator();
+        $generator->addPage('deliveryOptions/deliveries', '\DigitalPenguin\Commerce_PacklinkPRO\Admin\DeliveryOptions\Services');
     }
 
     public function getModuleConfiguration(\comModule $module)
@@ -52,7 +64,8 @@ class PacklinkPRO extends BaseModule
         $fields[] = new CheckboxField($this->commerce, [
             'name' => 'properties[sandbox]',
             'label' => $this->adapter->lexicon('commerce_packlinkpro.use_sandbox'),
-            'value' => $module->getProperty('sandbox', '')
+            'value' => $module->getProperty('sandbox', ''),
+            'description' => $this->adapter->lexicon('commerce_packlinkpro.sandbox_no_key'),
         ]);
 
         $fields[] = new SectionField($this->commerce, [
@@ -68,24 +81,5 @@ class PacklinkPRO extends BaseModule
         ]);
 
         return $fields;
-    }
-
-    /**
-     * @param \comOrder $order
-     * @param array $fulfillmentOrders
-     */
-    public function sendRequest(): void
-    {
-        $apiKey = $this->getConfig('apikey');
-        $useSandbox = in_array($this->getConfig('usesandbox'), [1, true, 'on']);
-
-        // Determine if we should use test API credentials or not
-        $apiClient = new APIClient($apiKey, $useSandbox);
-
-        // Authenticate with API and retrieve token
-        $response = $apiClient->request('shipments',[],'GET');
-        $data = $response->getData();
-        $this->commerce->modx->log(MODX_LOG_LEVEL_ERROR, print_r($data, true));
-
     }
 }

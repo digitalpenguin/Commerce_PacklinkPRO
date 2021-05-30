@@ -9,22 +9,34 @@ class APIClient {
     /** @var Client */
     private $client;
 
-    public function __construct(string $apiKey, bool $useSandbox = true)
+    public function __construct(bool $useSandbox = false, string $apiKey = '')
     {
-        $this->client = new Client([
-            'headers' => [
-                'Authorization' => $apiKey,
-                'Content-Type'  => 'application/json',
-            ],
-            'base_uri'      =>  $useSandbox ? 'https://apisandbox.packlink.com/v1' : 'https://api.packlink.com/v1',
-            'http_errors'   =>  false,
-        ]);
+        // Sandbox uses a different base_uri and requires there to be no authorisation header param.
+        if ($useSandbox) {
+            $properties = [
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                ],
+                'base_uri' => 'https://apisandbox.packlink.com',
+            ];
+        }
+        // Use live API default
+        else {
+            $properties = [
+                'headers' => [
+                    'Authorization' => $apiKey,
+                    'Content-Type' => 'application/json',
+                ],
+                'base_uri' => 'https://api.packlink.com',
+            ];
+        }
+
+        $this->client = new Client($properties);
     }
 
     /**
      * Creates an API request and actions it
      * @param string $resource
-     * @param string $apiKey
      * @param array $data
      * @param string $method
      * @return Response
@@ -32,9 +44,18 @@ class APIClient {
     public function request(string $resource, array $data, string $method = 'POST'): Response
     {
         try {
-            $response = $this->client->request($method, $resource, [
-                'json' => $data,
-            ]);
+            if($method === 'GET') {
+                $query = http_build_query($data);
+                $response = $this->client->request('GET', $resource, [
+                    'query' => $query,
+                ]);
+            }
+            else {
+                $response = $this->client->request($method, $resource, [
+                    'json' => $data,
+                ]);
+            }
+
             return Response::from($response);
         } catch (GuzzleException $e) {
             $errorResponse = new Response(false, 0);
