@@ -2,78 +2,33 @@
 
 namespace DigitalPenguin\Commerce_PacklinkPRO\Admin\DeliveryOptions;
 
-use DigitalPenguin\Commerce_PacklinkPRO\API\APIClient;
 use modmore\Commerce\Admin\Sections\SimpleSection;
 use modmore\Commerce\Admin\Page;
-use modmore\Commerce\Exceptions\ViewException;
 
 class Services extends Page
 {
-    public $classKey = 'plpOrderShipment';
     public $key = 'deliveryOptions/deliveries';
     public $title = 'Delivery Options';//'commerce_referrals.referrer.edit';
 
     protected $orderShipment;
-    protected $orderShipmentId;
-    protected $order;
 
     public function setUp()
     {
         $orderShipmentId = (int)$this->getOption('id', 0);
-        $this->order = $this->adapter->getObject(\comOrder::class, ['id' => $this->getOption('order')]);
-        $this->orderShipment = $this->adapter->getObject('plpOrderShipment', ['id' => $orderShipmentId]);
+        $section = new SimpleSection($this->commerce, [
+            'title' => $this->title
+        ]);
 
-        if ($this->orderShipment instanceof \plpOrderShipment) {
-            $section = new SimpleSection($this->commerce, [
-                'title' => $this->title
-            ]);
+        $section->addWidget((new Grid($this->commerce,[
+            'id' => $orderShipmentId
+        ]))->setUp());
 
-            $section->addWidget((new Grid($this->commerce,[
-                'orderShipmentId' => $this->orderShipmentId,
-                'order' => $this->order,
-                'services' => $this->getServices()
-            ]))->setUp());
+        $this->addSection($section);
 
-            $section2 = new SimpleSection($this->commerce, [
-
-            ]);
-
-            $this->addSection($section);
-            $this->addSection($section2);
-
-            return $this;
-        }
-
-        return $this->returnError($this->adapter->lexicon(''));
+        return $this;
     }
 
-    public function getServices()
-    {
-        $plpModule = null;
-        foreach ($this->commerce->modules as $module) {
-            if (get_class($module) === 'DigitalPenguin\Commerce_PacklinkPRO\Modules\PacklinkPRO') {
-                $plpModule = $module;
-            }
-        }
-        if (!$plpModule) return [];
 
-        $useSandbox = $plpModule->getConfig('sandbox');
-        $apiKey = $plpModule->getConfig('apikey');
-
-        $output = [];
-
-        $data = $this->orderShipment->getShipmentData();
-
-        $client = new APIClient($useSandbox, $apiKey);
-        $response = $client->request('/v1/services', $data, 'GET');
-        $data = $response->getData();
-        echo '<pre>';
-        var_dump($data[0]);
-        echo '</pre>';
-
-        return $data;
-
-    }
 }
 //https://apisandbox.packlink.com/v1/services?
 //platform=PRO
