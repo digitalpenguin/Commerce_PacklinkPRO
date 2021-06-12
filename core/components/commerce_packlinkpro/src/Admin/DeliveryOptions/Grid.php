@@ -10,20 +10,29 @@ use modmore\Commerce\Events\Admin\OrderActions;
 
 class Grid extends GridWidget {
     public $key = 'carriers-grid';
-    public $title = '';
+    protected $orderShipmentId;
+    /** @var \plpOrderShipment */
+    protected $orderShipment;
+    /** @var \comOrder */
+    protected $order;
 
-    public $defaultSort = 'received_on';
-    public $defaultSortDir = 'DESC';
+    public function setUp()
+    {
+        $this->orderShipmentId = (int)$this->getOption('id', 0);
+        $this->orderShipment = $this->adapter->getObject(\plpOrderShipment::class,['id' => $this->orderShipmentId]);
+        $this->order = $this->orderShipment->getOrder();
+        return parent::setUp();
+    }
 
     public function getTopToolbar(array $options = [])
     {
         $toolbar = [];
 
         $toolbar[] = [
-            'name' => 'search_by_carrier',
-            'title' => 'Search by carrier',//$this->adapter->lexicon('commerce.search_by_carrier'),
+            'name' => 'filter_by_carrier',
+            'title' => 'Filter by Carrier',//$this->adapter->lexicon('commerce.search_by_carrier'),
             'type' => 'textfield',
-            'value' => array_key_exists('search_by_carrier', $options) ? htmlentities($options['search_by_carrier'], ENT_QUOTES, 'UTF-8') : '',
+            'value' => array_key_exists('filter_by_carrier', $options) ? htmlentities($options['filter_by_carrier'], ENT_QUOTES, 'UTF-8') : '',
             'position' => 'top',
             'width' => 'four wide',
         ];
@@ -32,10 +41,12 @@ class Grid extends GridWidget {
             'name' => 'manual_shipment',
             'title' => 'Manual Shipment',
             'type' => 'button',
-            'link' => $this->adapter->makeAdminUrl('deliveryOptions/manual'),
+            'link' => $this->adapter->makeAdminUrl('deliveryOptions/manual', [
+                'id'    => $this->orderShipmentId
+            ]),
             'button_class' => 'commerce-ajax-modal',
             'icon_class' => 'envelope',
-            'modal_title' => $this->adapter->lexicon('commerce.new_status'),
+            'modal_title' => 'Manual Shipment',
             'position' => 'top',
             'width' => 'four wide',
         ];
@@ -47,14 +58,15 @@ class Grid extends GridWidget {
         $services = $this->getServices();
 
         $output = [];
-        if (!empty($options['search_by_carrier'])) {
+        // Find partial matches when filtering
+        if (!empty($options['filter_by_carrier'])) {
             foreach ($services as $service) {
-                // Find an exact or fuzzy match by the carrier name
-                if (strpos(strtolower($service['carrier_name']), strtolower($options['search_by_carrier'])) !== false) {
+                if (strpos(strtolower($service['carrier_name']), strtolower($options['filter_by_carrier'])) !== false) {
                     $output[] = $this->prepareItem($service);
                 }
             }
         }
+        // List all
         else {
             foreach ($services as $service) {
                 $output[] = $this->prepareItem($service);
@@ -67,14 +79,14 @@ class Grid extends GridWidget {
     {
         return [
 
-            new Column('logo_id', '',false,true/*$this->adapter->lexicon('commerce_packlinkpro.carrier_name')*/),
+            new Column('logo_id', '', false, true/*$this->adapter->lexicon('commerce_packlinkpro.carrier_name')*/),
             new Column('carrier_name', 'Carrier'/*$this->adapter->lexicon('commerce_packlinkpro.carrier_name')*/),
             new Column('name', 'Name'),
             new Column('currency','Currency'),
-            new Column('base_price','Price',false,true),
+            new Column('base_price','Price', false, true),
             new Column('transit_time','Transit'),
             new Column('first_estimated_delivery_date','Delivery Est.'),
-            new Column('button','',false,true)
+            new Column('button','', false, true)
         ];
     }
 
@@ -87,13 +99,15 @@ class Grid extends GridWidget {
             $service['base_price'] = '<strong>' . $service['base_price'] . '</strong>';
         }
 
-        $service['button'] = '<a href="#" style="white-space:pre-wrap; word-break:break-word;" class="ui primary button">Select</a>';
+        $url = $this->adapter->makeAdminUrl('deliveryOptions/carrier', ['id' => $service['id'], 'shipment' => $this->orderShipmentId, 'order' => $this->order->get('id')]);
+        $service['button'] = '<a href="' . $url . '" style="white-space:pre-wrap; word-break:break-word;" class="ui primary button commerce-ajax-modal">Select</a>';
 
         return $service;
     }
 
     public function getServices()
     {
+        // Grab the packlink module
         $plpModule = null;
         foreach ($this->commerce->modules as $module) {
             if (get_class($module) === 'DigitalPenguin\Commerce_PacklinkPRO\Modules\PacklinkPRO') {
@@ -105,19 +119,22 @@ class Grid extends GridWidget {
         $useSandbox = $plpModule->getConfig('sandbox');
         $apiKey = $plpModule->getConfig('apikey');
 
-        $orderShipment = $this->adapter->getObject(\plpOrderShipment::class,['id' => $this->getOption('id')]);
-        if(!$orderShipment instanceof \plpOrderShipment) return [];
-
-        $data = $orderShipment->getShipmentData();
+        if(!$this->orderShipment instanceof \plpOrderShipment) return [];
+        $data = $this->orderShipment->getShipmentData();
 
         $client = new APIClient($useSandbox, $apiKey);
         $response = $client->request('/v1/services', $data, 'GET');
-        $data = $response->getData();
-//        echo '<pre>';
-//        var_dump($data[3]);
-//        echo '</pre>';
+        //$this->adapter->log(1,print_r($response,true));
 
-        return $data;
+        $responseData = $response->getData();
 
+        if ($response->getStatusCode() !== 200) {
+            echo 'Error connecting to the API...<br>';
+            print_r($response);
+            echo '<br><br>NOTE: If you are using the Packlink sandbox API, it is often offline. You may need to switch to the live API.<br>';
+            return [];
+        }
+
+        return $responseData;
     }
 }

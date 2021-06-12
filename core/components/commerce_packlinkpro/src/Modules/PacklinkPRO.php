@@ -54,6 +54,8 @@ class PacklinkPRO extends BaseModule
     {
         $generator = $event->getGenerator();
         $generator->addPage('deliveryOptions/deliveries', '\DigitalPenguin\Commerce_PacklinkPRO\Admin\DeliveryOptions\Services');
+        $generator->addPage('deliveryOptions/manual', '\DigitalPenguin\Commerce_PacklinkPRO\Admin\ManualShipment\Overview');
+        $generator->addPage('deliveryOptions/carrier', '\DigitalPenguin\Commerce_PacklinkPRO\Admin\CreateOrder\Overview');
     }
 
     public function getModuleConfiguration(\comModule $module)

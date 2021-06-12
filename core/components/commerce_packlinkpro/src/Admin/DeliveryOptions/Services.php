@@ -4,6 +4,7 @@ namespace DigitalPenguin\Commerce_PacklinkPRO\Admin\DeliveryOptions;
 
 use modmore\Commerce\Admin\Sections\SimpleSection;
 use modmore\Commerce\Admin\Page;
+use modmore\Commerce\Admin\Widgets\HtmlWidget;
 
 class Services extends Page
 {
@@ -15,12 +16,28 @@ class Services extends Page
     public function setUp()
     {
         $orderShipmentId = (int)$this->getOption('id', 0);
+        $this->orderShipment = $this->adapter->getObject(\plpOrderShipment::class, [
+            'id' => $orderShipmentId
+        ]);
+
         $section = new SimpleSection($this->commerce, [
             'title' => $this->title
         ]);
 
+        if ($this->orderShipment instanceof \plpOrderShipment) {
+            $originAddress = $this->getOriginAddress();
+            $destinationAddress = $this->getDestinationAddress();
+
+            $section->addWidget((new HtmlWidget($this->commerce,[
+                'html' => $this->commerce->view()->render('packlink/services-header.twig', [
+                    'origin' =>  $originAddress,
+                    'destination' => $destinationAddress
+                ])
+            ]))->setUp());
+        }
+
         $section->addWidget((new Grid($this->commerce,[
-            'id' => $orderShipmentId
+            'id' => $orderShipmentId,
         ]))->setUp());
 
         $this->addSection($section);
@@ -28,6 +45,34 @@ class Services extends Page
         return $this;
     }
 
+    public function getOriginAddress(): array
+    {
+        $shippingMethod = $this->adapter->getObject(\plpShippingMethod::class, [
+            'id' => $this->orderShipment->get('method')
+        ]);
+        if (!$shippingMethod instanceof \plpShippingMethod) return [];
+
+        return [
+            'fullname' => $shippingMethod->getProperty('from_full_name'),
+            'company' => $shippingMethod->getProperty('from_company'),
+            'address1' => $shippingMethod->getProperty('from_address_line1'),
+            'address2' => $shippingMethod->getProperty('from_address_line2'),
+            'address3' => $shippingMethod->getProperty('from_address_line3'),
+            'city' => $shippingMethod->getProperty('from_city'),
+            'state' => $shippingMethod->getProperty('from_state'),
+            'zip' => $shippingMethod->getProperty('from_zip'),
+            'country' => $shippingMethod->getProperty('from_country')
+        ];
+
+    }
+
+    public function getDestinationAddress(): array
+    {
+        /** @var \comOrder $order */
+        $order = $this->orderShipment->getOrder();
+        $address = $order->getShippingAddress();
+        return $address->toArray();
+    }
 
 }
 //https://apisandbox.packlink.com/v1/services?

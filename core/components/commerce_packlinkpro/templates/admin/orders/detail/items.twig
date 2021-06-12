@@ -1,0 +1,443 @@
+
+<a href="{{ admin_url('order/items/create', {order: order.id}) }}"
+   class="ui small primary labeled icon button commerce-ajax-modal"
+   data-modal-title="{{ lex('commerce.orderitem.add') }}"
+   role="button"
+   id="commerce-items-add"
+   data-modal-refresh-on-close="true"
+>
+    <i class="plus icon"></i>
+    {{ lex('commerce.orderitem.add') }}
+</a>
+
+<a href="{{ admin_url('order/shipments/create', {order: order.id}) }}"
+   class="ui small labeled icon button commerce-ajax-modal"
+   data-modal-title="{{ lex('commerce.shipment.add') }}"
+   role="button"
+   id="commerce-items-add"
+   data-modal-refresh-on-close="true"
+>
+    <i class="plus icon"></i>
+    {{ lex('commerce.shipment.add') }}
+</a>
+
+<table class="ui compact table commerce-orderitems">
+    <thead>
+    <tr>
+        <th>{{ lex('commerce.shipment') }}</th>
+        <th>{{ lex('commerce.product') }}</th>
+        <th class="collapsing right aligned">{{ lex('commerce.quantity') }}</th>
+        <th>{{ lex('commerce.total') }}</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for shipment in shipments %}
+    <tr class="top aligned">
+        <td rowspan="{{ shipment.rowspan }}" class="commerce-orderitems__shipment" style="border-right: 5px solid #eee;">
+            <div class="commerce-ordershipment__name_container">
+                <a href="{{ admin_url('order/shipments/update', {id: shipment.id, order: order.id}) }}"
+                   class="commerce-ajax-modal commerce-ordershipment__name"
+                   data-modal-refresh-on-close="true"
+                >
+                    {{ shipment.method_name|default('Unknown shipping method') }}
+                    <span class="commerce-muted right">#{{ shipment.id }}</span>
+                </a>
+            </div>
+
+            {% if shipment.tracking_reference %}
+                {% if shipment.tracking_url %}
+                    <a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener" class="ui basic label" class="commerce-orderitems__shipment_tracking" style="margin-top: 0.5rem;">
+                        {{ lex('commerce.tracking_reference') }}
+                        <div class="detail">
+                            {{ shipment.tracking_reference }}
+                        </div>
+                    </a>
+                {% else %}
+                    <div class="ui basic label" class="commerce-orderitems__shipment_tracking" style="margin-top: 0.5rem;">
+                        {{ lex('commerce.tracking_reference') }}
+                        <div class="detail">
+                            {{ shipment.tracking_reference }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            <div class="ui list commerce-order-grid-meta commerce-orderitems__shipmentmeta">
+                {% if showDeliveryType %}
+                    <div class="item">
+                        <div class="ui grid">
+                            <div class="six wide column muted commerce-order-grid-meta-label">
+                                {{ lex('commerce.delivery_type') }}
+                            </div>
+                            <div class="ten wide column commerce-order-grid-meta-value">
+                                {{ shipment.deliverytype_name }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if shipment.weight != 0 %}
+                    <div class="item">
+                        <div class="ui grid">
+                            <div class="six wide column muted commerce-order-grid-meta-label">
+                                {{ lex('commerce.weight') }}
+                            </div>
+                            <div class="ten wide column commerce-order-grid-meta-value">
+                                {{ shipment.weight_formatted }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if shipment.fee != 0 %}
+                    <div class="item">
+                        <div class="ui grid">
+                            <div class="six wide column muted commerce-order-grid-meta-label">
+                                {{ lex('commerce.fee') }}
+                            </div>
+                            <div class="ten wide column commerce-order-grid-meta-value">
+                                {{ shipment.fee_incl_tax_formatted }}
+                                {% if shipment.tax_amount != 0 %}
+                                    <span class="commerce-muted">
+                                        &middot;
+                                        {% if shipment.is_inclusive %}
+                                            {{ lex('commerce.tax_included') }}:
+                                        {% else %}
+                                            {{ lex('commerce.tax') }}:
+                                        {% endif %}
+                                        {{ shipment.tax_amount_formatted }}
+                                        </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                {% for item in shipment.meta_list %}
+                    <div class="item">
+                        <div class="ui grid">
+                            <div class="six wide column muted commerce-order-grid-meta-label">
+                                {{ item.label }}
+                            </div>
+                            <div class="ten wide column commerce-order-grid-meta-value">
+                                {{ item.value }}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div>
+                <div class="bold" style="display:inline-block">Packlink PRO Shipment</div>
+                {% if shipment.properties.carrier_type %}
+                <div>
+                    <span style="display:inline-block;padding:6px 8px 3px;border-radius:3px;color:#fff;background:#3697cd;margin-right:6px;">
+                        <i class="icon check"></i>{{ shipment.properties.carrier_type|capitalize }}
+                    </span>
+                    <a class="commerce-ajax-modal" href="{{ shipment.properties.services_link }}">Edit</a>
+                </div>
+                {% else %}
+                    <div>
+                        <a class="commerce-ajax-modal" href="{{ shipment.properties.services_link }}">Choose carrier service</a>
+                    </div>
+                {% endif %}
+            </div>
+            {% if shipment.actions|length > 0 %}
+                <div class="right">
+                    {% include "admin/_actions_menu.twig" with {actions: shipment.actions, refreshOnClose: true} %}
+                </div>
+            {% endif %}
+
+        </td>
+
+
+        {% for item in shipment.items %}
+            {% if loop.index0 != 0 %}
+            <tr class="top aligned">
+            {% endif %}
+
+            <td class="commerce-orderitem__name_container">
+                {% if item.image %}
+                    <a href="{{ item.image }}" target="_blank" rel="noopener">
+                        <img src="{{ item.image|thumbnail({w: 100, h: 100, source: 0}) }}" class="commerce-orderitem__image" alt="{{ item.name }}" onerror="this.style.display = 'none';">
+                    </a>
+                {% elseif item.product.image %}
+                    <a href="{{ item.product.image }}" target="_blank" rel="noopener">
+                        <img src="{{ item.product.image|thumbnail({w: 100, h: 100, source: 0}) }}" class="commerce-orderitem__image" alt="{{ item.name }}" onerror="this.style.display = 'none';">
+                    </a>
+                {% endif %}
+
+                <h4 class="commerce-orderitem__name">
+                    {% if item.link %}
+                        <a href="{{ item.link }}" target="_blank" rel="noopener">{{ item.name }}</a>
+                    {% elseif item.product and item.product.link %}
+                        <a href="{{ item.product.link }}" target="_blank" rel="noopener">{{ item.name }}</a>
+                    {% else %}
+                        {{ item.name }}
+                    {% endif %}
+                    <br>
+                    <span class="commerce-orderitem__sku">
+                        {{ item.sku }}
+                    </span>
+                </h4>
+
+            </td>
+
+            <td class="commerce-orderitem__quantity right aligned">
+                {{ item.quantity }}
+            </td>
+
+            <td class="commerce-orderitem__price_container">
+                {{ item.total_formatted }}
+                <br>
+                <input type="checkbox" class="commerce-expand-input" id="commerce-orderitem-{{ item.id }}-check">
+                <label for="commerce-orderitem-{{ item.id }}-check">
+                    {{ lex('commerce.view_calculation') }}
+                    <span class="commerce-expand-icon"></span>
+                </label>
+                <div class="commerce-expand-details">
+
+                    <table class="ui small basic table commercer-orderitem__pricedetails">
+                        <tbody>
+                        <tr>
+                            <td class="commerce-orderitem__detaillabel">
+                                {{ lex('commerce.price') }}
+                            </td>
+                            <td class="commerce-orderitem__detailvalue">
+                                {{ item.quantity }} x {{ item.price_formatted }}
+                            </td>
+                            <td class="commerce-orderitem__detailtotal">
+                                {{ item.subtotal_before_extra_formatted }}
+                            </td>
+                        </tr>
+
+                        {% set adjExtra = item.adjustments|filter(v => (v.class_key == 'comOrderItemExtraAdjustment')) %}
+                        {% set adjDiscount = item.adjustments|filter(v => (v.class_key != 'comOrderItemExtraAdjustment')) %}
+                        {% for adjustment in adjExtra %}
+                            <tr>
+                                <td class="commerce-orderitem__detaillabel" title="{{ adjustment.key }}">
+                                    {{ adjustment.name }}
+                                </td>
+                                <td class="commerce-orderitem__detailvalue">
+                                    {% if adjustment.price_change_percentage %}
+                                        {{ adjustment.price_change_percentage }}%
+                                    {% elseif adjustment.price_change_per_quantity %}
+                                        {{ item.quantity }} &times; {{ adjustment.price_change_formatted }}
+                                    {% else %}
+                                        &nbsp;
+                                    {% endif %}
+                                </td>
+                                <td class="commerce-orderitem__detailtotal">
+                                    +{{ adjustment.total_change_formatted }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        {% if adjExtra|length > 0 %}
+                        <tr class="commerce-orderitem__summaryrow">
+                            <td class="commerce-orderitem__detaillabel" colspan="2">
+                                {{ lex('commerce.subtotal') }}
+                            </td>
+                            <td class="commerce-orderitem__detailtotal">
+                                {{ item.subtotal_formatted }}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% for adjustment in adjDiscount %}
+                            <tr>
+                                <td class="commerce-orderitem__detaillabel" title="{{ adjustment.key }}">
+                                    {{ adjustment.name }}
+                                </td>
+                                <td class="commerce-orderitem__detailvalue">
+                                    {% if adjustment.price_change_percentage %}
+                                        {{ adjustment.price_change_percentage }}%
+                                    {% elseif adjustment.price_change_per_quantity %}
+                                        {{ adjustment.price_change }} &times; {{ item.quantity }}
+                                    {% else %}
+                                        &nbsp;
+                                    {% endif %}
+                                </td>
+                                <td class="commerce-orderitem__detailtotal">
+                                    -{{ adjustment.total_change_formatted }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+
+                        {% if item.shipping != 0 %}
+                            <tr>
+                                <td class="commerce-orderitem__detaillabel" colspan="2">
+                                    {{ lex('commerce.shipping') }}
+                                </td>
+                                <td class="commerce-orderitem__detailtotal">
+                                    {{ item.shipping_formatted }}
+                                </td>
+                            </tr>
+                        {% endif %}
+
+                        <tr class="commerce-orderitem__summaryrow">
+                            <td class="commerce-orderitem__detaillabel" colspan="2">
+                                {{ lex('commerce.total_before_tax') }}
+                            </td>
+                            <td class="commerce-orderitem__detailtotal">
+                                {{ item.total_before_tax_formatted }}
+                            </td>
+                        </tr>
+
+                        {% for tax in item.taxes %}
+                            <tr>
+                                <td class="commerce-orderitem__detaillabel">
+                                    {% if tax.rate %}
+                                        {{ tax.rate.name }}
+                                    {% else %}
+                                        #{{ tax.tax_rate }}
+                                    {% endif %}
+
+                                    {% if tax.is_inclusive %}
+                                        <span class="commerce-muted">
+                                            ({{ lex('commerce.is_inclusive') }})
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="commerce-orderitem__detailvalue">
+                                    {{ tax.percentage_formatted }}
+                                </td>
+                                <td class="commerce-orderitem__detailtotal">
+                                    {{ tax.tax_amount_formatted }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+
+                        {% if item.total_ex_tax != item.total_before_tax %}
+                            <tr>
+                                <td class="commerce-orderitem__detaillabel" colspan="2">
+                                    {{ lex('commerce.total_ex_tax') }}
+                                </td>
+                                <td class="commerce-orderitem__detailtotal">
+                                    {{ item.total_ex_tax_formatted }}
+                                </td>
+                            </tr>
+                        {% endif %}
+
+                        <tr class="commerce-orderitem__summaryrow">
+                            <td class="commerce-orderitem__detaillabel" colspan="2">
+                                {{ lex('commerce.total') }}
+                            </td>
+                            <td class="commerce-orderitem__detailtotal">
+                                {{ item.total_formatted }}
+                            </td>
+                        </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+            </td>
+
+            <td class="right aligned">
+                {% if item.actions|length > 0 %}
+                    {% include "admin/_actions_menu.twig" with {actions: item.actions, refreshOnClose: true} %}
+                {% endif %}
+            </td>
+
+            {% if item.detail_row %}
+                </tr>
+                <tr class="commerce-orderitem__detailrow top aligned">
+                    <td colspan="4">
+                        {{ item.detail_row|raw }}
+                    </td>
+            {% endif %}
+        {% else %}
+            <td colspan="4" class="commerce-orderitem__empty">
+                <em class="commerce-muted">{{ lex('commerce.shipment_empty') }}</em>
+            </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot class="commerce-grid-footer right aligned">
+    {% if order.shipping != 0 %}
+        <tr>
+            <th colspan="2">{{ lex('commerce.shipping') }}</th>
+            <th>{{ order.shipping_formatted }}</th>
+            <th colspan="2"></th>
+        </tr>
+    {% endif %}
+
+    {% if order.total_ex_tax != order.total_before_tax %}
+        <tr>
+            <th colspan="2"><b>{{ lex('commerce.total_before_tax') }}</b></th>
+            <th><b>{{ order.total_before_tax_formatted }}</b></th>
+            <th colspan="2"></th>
+        </tr>
+    {% else %}
+        <tr>
+            <th colspan="2"><b>{{ lex('commerce.total_ex_tax') }}</b></th>
+            <th><b>{{ order.total_ex_tax_formatted }}</b></th>
+            <th colspan="2"></th>
+        </tr>
+    {% endif %}
+
+    {% if order.tax != 0 %}
+        <tr>
+            <th colspan="2" class="top aligned">
+                {% if order.total_ex_tax != order.total_before_tax %}
+                    {{ lex('commerce.tax_included') }}
+                {% else %}
+                    {{ lex('commerce.tax') }}
+                {% endif %}
+            </th>
+            <th class="top aligned">{{ order.tax_formatted }}</th>
+            <th colspan="2" class="left aligned">
+
+                <input type="checkbox" class="commerce-expand-input" id="commerce-orderitem-{{ item.id }}-check">
+                <label for="commerce-orderitem-{{ item.id }}-check">
+                    {{ lex('commerce.order.view_details') }}
+                    <span class="commerce-expand-icon"></span>
+                </label>
+                <div class="commerce-expand-details">
+                    <div class="ui list">
+                        {% for tax in taxes %}
+                            <div class="item">
+                                {#<i class="icon mail"></i>#}
+                                <div class="content">
+                                    <div class="header">{{ tax.name }}</div>
+                                    <div class="description">
+                                        {{ lex('commerce.taxed_amount') }}: {{ tax.total_taxed_amount_formatted }}
+                                        {% if tax.is_inclusive %}
+                                            <span class="commerce-muted">({{ lex('commerce.is_inclusive') }})</span>
+                                        {% endif %}
+                                        <br>
+                                        {{ lex('commerce.percentage') }}: {{ tax.percentage_formatted }}
+                                        <br>
+                                        {{ lex('commerce.tax_amount') }}: {{ tax.total_tax_amount_formatted }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </th>
+        </tr>
+    {% endif %}
+
+    {% if order.total_ex_tax != order.total_before_tax %}
+        <tr>
+            <th colspan="2">{{ lex('commerce.total_ex_tax') }}</th>
+            <th>{{ order.total_ex_tax_formatted }}</th>
+            <th colspan="2"></th>
+        </tr>
+    {% endif %}
+
+    <tr>
+        <th colspan="2"><b>{{ lex('commerce.total') }}</b></th>
+        <th><b>{{ order.total_formatted }}</b></th>
+        <th colspan="2"></th>
+    </tr>
+
+    {% if order.total_due != 0 %}
+        <tr>
+            <th colspan="2">{{ lex('commerce.total_due') }}</th>
+            <th>{{ order.total_due_formatted }}</th>
+            <th colspan="2"></th>
+        </tr>
+    {% endif %}
+
+    </tfoot>
+</table>

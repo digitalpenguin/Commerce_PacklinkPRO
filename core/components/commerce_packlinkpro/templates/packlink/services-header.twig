@@ -1,0 +1,63 @@
+<div style="margin:-20px 0 30px 0; display:flex; justify-content: space-evenly;">
+    <div style="width: 100%;">
+        <h3>Origin</h3>
+        {% if origin.fullname %}
+            {{ origin.fullname }}<br>
+        {% endif %}
+        {% if origin.company %}
+            {{ origin.company }}<br>
+        {% endif %}
+        {% if origin.address1 %}
+            {{ origin.address1 }}<br>
+        {% endif %}
+        {% if origin.address2 %}
+            {{ origin.address2 }}<br>
+        {% endif %}
+        {% if origin.address3 %}
+            {{ origin.address3 }}<br>
+        {% endif %}
+        {% if origin.city %}
+            {{ origin.city }}
+        {% endif %}
+        {% if origin.state %}
+            {{ origin.state }}
+        {% endif %}
+        {% if origin.zip %}
+            {{ origin.zip }}<br>
+        {% endif %}
+        {% if origin.country %}
+            {{ origin.country }}
+        {% endif %}
+    </div>
+    <div style="width:100%;">
+        <h3>Destination</h3>
+        {% if destination.fullname %}
+            {{ destination.fullname }}<br>
+        {% endif %}
+        {% if destination.company %}
+            {{ destination.company }}<br>
+        {% endif %}
+        {% if destination.address1 %}
+            {{ destination.address1 }}<br>
+        {% endif %}
+        {% if destination.address2 %}
+            {{ destination.address2 }}<br>
+        {% endif %}
+        {% if destination.address3 %}
+            {{ destination.address3 }}<br>
+        {% endif %}
+        {% if destination.city %}
+            {{ destination.city }}
+        {% endif %}
+        {% if destination.state %}
+            {{ destination.state }}
+        {% endif %}
+        {% if destination.zip %}
+            {{ destination.zip }}<br>
+        {% endif %}
+        {% if destination.country %}
+            {{ destination.country }}
+        {% endif %}
+    </div>
+
+</div>

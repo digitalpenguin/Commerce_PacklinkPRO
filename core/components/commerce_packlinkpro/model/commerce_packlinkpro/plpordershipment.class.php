@@ -4,6 +4,7 @@ use modmore\Commerce\Admin\Util\Action;
 use modmore\Commerce\Admin\Widgets\Form\DescriptionField;
 use modmore\Commerce\Admin\Widgets\Form\NumberField;
 use modmore\Commerce\Admin\Widgets\Form\Validation\Required;
+use modmore\Commerce\Gateways\Helpers\GatewayHelper;
 
 /**
  * PacklinkPRO for Commerce.
@@ -117,16 +118,41 @@ class plpOrderShipment extends comOrderShipment
         if (!$shippingMethod instanceof \plpShippingMethod) return [];
 
         $data['from'] = [
+            'name'      =>  $shippingMethod->getProperty('from_first_name'),
+            'surname'   =>  $shippingMethod->getProperty('from_last_name'),
+            'company'   =>  $shippingMethod->getProperty('from_company'),
+            'street1'   =>  $shippingMethod->getProperty('from_address_line1'),
+            'street2'   =>  $shippingMethod->getProperty('from_address_line2'),
+            'city'      =>  $shippingMethod->getProperty('from_city'),
+            'state'     =>  $shippingMethod->getProperty('from_state'),
             'country'   =>  $shippingMethod->getProperty('from_country'),
-            'zip'       =>  $shippingMethod->getProperty('from_zip')
+            'zip'       =>  $shippingMethod->getProperty('from_zip'),
+            'zip_code'  =>  $shippingMethod->getProperty('from_zip'),
+            'phone'     =>  $shippingMethod->getProperty('from_phone'),
+            'email'     =>  $shippingMethod->getProperty('from_email'),
         ];
 
         // Get destination data
         $order = $this->getOrder();
         $shippingAddress = $order->getShippingAddress();
+        $firstName = $shippingAddress->get('firstname');
+        $lastName = $shippingAddress->get('lastname');
+        $fullName = $shippingAddress->get('fullname');
+        GatewayHelper::normalizeNames($firstName, $lastName, $fullName);
+
         $data['to'] = [
-            'country'   =>  'GB',//$shippingAddress->get('country'),
-            'zip'       =>  'FY2 0AA'//$shippingAddress->get('zip')
+            'name'      =>  $firstName,
+            'surname'   =>  $lastName,
+            'company'   =>  $shippingAddress->get('company'),
+            'street1'   =>  $shippingAddress->get('address1'),
+            'street2'   =>  $shippingAddress->get('address2'),
+            'city'      =>  $shippingAddress->get('city'),
+            'state'     =>  $shippingAddress->get('state'),
+            'country'   =>  $shippingAddress->get('country'),
+            'zip'       =>  $shippingAddress->get('zip'),
+            'zip_code'  =>  $shippingAddress->get('zip'),
+            'phone'     =>  $shippingAddress->get('phone'),
+            'email'     =>  $shippingAddress->get('email')
         ];
 
         // Get order item data
@@ -143,6 +169,7 @@ class plpOrderShipment extends comOrderShipment
             }
         }
 //        echo '<pre>';
+//        $this->adapter->log(1,print_r($data,true));
 //        var_dump($data);
 //        echo '</pre>';
         return  $data;
@@ -169,7 +196,13 @@ class plpOrderShipment extends comOrderShipment
      */
     public function onOrderStateProcessing()
     {
+        $data = $this->getShipmentData();
+        // Add "from" address to shipment
+        $this->setProperty('packlink', $data);
 
+        // Add services admin link
+        $this->setProperty('services_link', $this->adapter->makeAdminUrl('deliveryOptions/deliveries', ['id' => $this->get('id'), 'order' => $this->get('order')]));
+        $this->save();
         return true;
     }
 }
