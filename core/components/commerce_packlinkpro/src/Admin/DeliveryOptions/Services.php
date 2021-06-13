@@ -53,7 +53,8 @@ class Services extends Page
         if (!$shippingMethod instanceof \plpShippingMethod) return [];
 
         return [
-            'fullname' => $shippingMethod->getProperty('from_full_name'),
+            'name' => $shippingMethod->getProperty('from_first_name'),
+            'surname' => $shippingMethod->getProperty('from_last_name'),
             'company' => $shippingMethod->getProperty('from_company'),
             'address1' => $shippingMethod->getProperty('from_address_line1'),
             'address2' => $shippingMethod->getProperty('from_address_line2'),

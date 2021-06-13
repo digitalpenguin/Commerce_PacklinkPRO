@@ -3,6 +3,7 @@
 use modmore\Commerce\Admin\Util\Action;
 use modmore\Commerce\Admin\Widgets\Form\DescriptionField;
 use modmore\Commerce\Admin\Widgets\Form\NumberField;
+use modmore\Commerce\Admin\Widgets\Form\TextField;
 use modmore\Commerce\Admin\Widgets\Form\Validation\Required;
 use modmore\Commerce\Gateways\Helpers\GatewayHelper;
 
@@ -42,6 +43,16 @@ class plpOrderShipment extends comOrderShipment
     public static function getFieldsForProduct(Commerce $commerce, comProduct $product, comDeliveryType $deliveryType)
     {
         $fields = [];
+
+        $fields[] = new TextField($commerce, [
+            'label' => 'Shipping Description',//$this->adapter->lexicon('commerce_packlinkpro.shipping_id'),
+            'description' => 'One or two words describing the type of item.',//$this->adapter->lexicon('commerce_packlinkpro.shipping_id_desc'),
+            'name' => 'properties[shipping_desc]',
+            'value' => $product->getProperty('shipping_desc'),
+            'validation' => [
+                new Required(),
+            ]
+        ]);
 
         $fields[] = new NumberField($commerce, [
             'label' => 'Width (cm)',//$this->adapter->lexicon('commerce_packlinkpro.shipping_id'),

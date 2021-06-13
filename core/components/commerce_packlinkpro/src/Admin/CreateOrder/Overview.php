@@ -16,6 +16,7 @@ class Overview extends Page
     protected $carrierId;
     protected $useSandbox;
     protected $apiKey;
+    protected $apiClient;
     protected $carrierDetails;
 
     public function setUp()
@@ -37,6 +38,7 @@ class Overview extends Page
 
         $this->useSandbox = $plpModule->getConfig('sandbox');
         $this->apiKey = $plpModule->getConfig('apikey');
+        $this->apiClient = new APIClient($this->useSandbox, $this->apiKey);
 
         if ($this->orderShipment instanceof \plpOrderShipment) {
             $section = new SimpleSection($this->commerce, [
@@ -44,14 +46,22 @@ class Overview extends Page
             ]);
 
             $details = $this->getCarrierDetails($this->carrierId);
-            $draft = $this->createDraftOrder($details);
 
-            // Set property on shipment
-            $this->orderShipment->setProperty('carrier_type', $details['carrier_name']);
-            $this->orderShipment->save();
+            if (!$this->orderShipment->getProperty('draft_reference')) {
+
+                $draft = $this->createDraftOrder($details);
+                if (isset($draft['reference']) && !empty($draft['reference'])) {
+                    // Set property on shipment
+                    $this->orderShipment->setProperty('carrier_type', $details['carrier_name']);
+                    $this->orderShipment->setProperty('draft_reference', $draft['reference']);
+                    $this->orderShipment->save();
+                }
+            }
+
+            $labelData = $this->getShippingLabel();
 
             $section->addWidget((new HtmlWidget($this->commerce,[
-                'html' => '<pre>'.print_r($draft,true).'</pre>'
+                'html' => '<pre>'.print_r($labelData,true).'</pre>'
             ]))->setUp());
 
             $this->addSection($section);
@@ -63,10 +73,15 @@ class Overview extends Page
     public function createDraftOrder($details)
     {
         $data = $this->orderShipment->getProperty('packlink');
-        $data['content'] = 'Test content'; // 'Description of content'
-        $data['content_value'] = '200'; // total price
+        $data['platform'] = 'MODX Commerce';
+        $data['content'] = $this->getShipmentDescription();
+        $data['content_value'] = $this->getShipmentTotalValue();
         $data['service_id'] = $details['service_id'];
-        $data['shipment_custom_reference'] = 'testcustomreference';
+
+        // Reference is order id and shipment id
+        $data['shipment_custom_reference'] = 'modx-commerce-' .
+            $this->orderShipment->getOrder()->get('id') . '-' .
+            $this->orderShipment->get('id');
 
         $client = new APIClient($this->useSandbox, $this->apiKey);
         $response = $client->request('/v1/shipments', $data, 'POST');
@@ -75,12 +90,52 @@ class Overview extends Page
         return $response->getData();
     }
 
-    public function getCarrierDetails(int $carrierId)
+    /**
+     * @param int $carrierId
+     * @return array
+     */
+    public function getCarrierDetails(int $carrierId): array
     {
-        $client = new APIClient($this->useSandbox, $this->apiKey);
-        $response = $client->request('/v1/services/available/' . $carrierId . '/details', [], 'GET');
+        $response = $this->apiClient->request('/v1/services/available/' . $carrierId . '/details', [], 'GET');
         //$this->adapter->log(1,print_r($response,true));
-
         return $response->getData();
+    }
+
+    public function getShippingLabel() {
+        $shipmentRef = $this->orderShipment->getProperty('draft_reference');
+        if ($shipmentRef) {
+            $response = $this->apiClient->request('/v1/shipments/' . $shipmentRef . '/labels', [], 'GET');
+            //$this->adapter->log(1,print_r($response,true));
+            return $response->getData();
+        }
+        return [];
+    }
+
+    public function getTrackingId() {
+
+    }
+
+    /**
+     * @return float|int
+     */
+    public function getShipmentTotalValue()
+    {
+        $value = $this->orderShipment->get('product_value');
+        // This assumes currency has two decimal points
+        return $value / 100;
+    }
+
+    /**
+     * @return string
+     */
+    public function getShipmentDescription(): string
+    {
+        $output = '';
+        $items = $this->orderShipment->getItems();
+        foreach ($items as $item) {
+            $product = $item->getProduct();
+            $output .= $product->getProperty('shipping_desc') . ', ';
+        }
+        return $output;
     }
 }

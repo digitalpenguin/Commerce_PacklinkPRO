@@ -1,8 +1,11 @@
 <div style="margin:-20px 0 30px 0; display:flex; justify-content: space-evenly;">
     <div style="width: 100%;">
         <h3>Origin</h3>
-        {% if origin.fullname %}
-            {{ origin.fullname }}<br>
+        {% if origin.name %}
+            {{ origin.name }}
+        {% endif %}
+        {% if origin.surname %}
+            {{ origin.surname }}<br>
         {% endif %}
         {% if origin.company %}
             {{ origin.company }}<br>
